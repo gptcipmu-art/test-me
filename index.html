@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Me · Vocabulario</title>
+<style>
+  :root { --yellow:#FFD23F; --purple:#3b0764; --white:#fff; --green:#2f9e56; --red:#c0392b; --bg:#f1e6ff; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:"Source Sans 3",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:var(--bg); color:var(--purple); min-height:100vh; }
+  .wrap { max-width:640px; margin:0 auto; padding:16px; }
+  h1 { font-size:1.8rem; font-weight:900; text-transform:uppercase; margin:8px 0 4px; }
+  .sub { opacity:.8; margin-bottom:16px; }
+  .card { background:var(--white); border:4px solid var(--purple); border-radius:14px; box-shadow:6px 6px 0 var(--purple); padding:18px; margin-bottom:18px; }
+  .btn { display:inline-block; background:var(--yellow); color:var(--purple); border:3px solid var(--purple); border-radius:10px; box-shadow:3px 3px 0 var(--purple); padding:10px 16px; font-size:1rem; font-weight:900; cursor:pointer; font-family:inherit; }
+  .btn:active { transform:translate(2px,2px); box-shadow:1px 1px 0 var(--purple); }
+  .btn.ghost { background:var(--white); }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .btn.big { font-size:1.4rem; padding:16px 26px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 14px; }
+  .chip { border:2px solid var(--purple); border-radius:20px; padding:6px 12px; cursor:pointer; background:var(--white); font-weight:700; user-select:none; }
+  .chip.on { background:var(--purple); color:var(--white); }
+  label.lbl { font-weight:900; display:block; margin-top:6px; }
+  select { font-size:1rem; padding:6px; border:2px solid var(--purple); border-radius:8px; font-family:inherit; }
+  .prompt { font-size:2rem; font-weight:900; text-align:center; margin:14px 0 6px; word-wrap:break-word; }
+  .hint { text-align:center; opacity:.75; margin-bottom:14px; }
+  .center { text-align:center; }
+  .heard { min-height:1.6em; text-align:center; font-size:1.2rem; margin:14px 0; }
+  .ok { color:var(--green); font-weight:900; }
+  .bad { color:var(--red); font-weight:900; }
+  .progress { height:12px; background:var(--white); border:2px solid var(--purple); border-radius:8px; overflow:hidden; margin-bottom:12px; }
+  .progress > div { height:100%; background:var(--yellow); width:0; transition:width .3s; }
+  .mic-on { animation:pulse 1s infinite; }
+  @keyframes pulse { 50% { background:#ffe98a; } }
+  input[type=text] { width:100%; font-size:1.2rem; padding:10px; border:3px solid var(--purple); border-radius:10px; font-family:inherit; margin:8px 0; }
+  ul.res { list-style:none; margin-top:10px; }
+  ul.res li { padding:6px 0; border-bottom:1px dashed rgba(59,7,100,.3); }
+  .score { font-size:3rem; font-weight:900; text-align:center; }
+  .hidden { display:none; }
+  .err { background:#ffe3e3; border-color:var(--red); box-shadow:6px 6px 0 var(--red); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎤 Test Me</h1>
+  <div class="sub" id="who">Cargando…</div>
+
+  <!-- ERROR -->
+  <div class="card err hidden" id="errBox"></div>
+
+  <!-- SETUP -->
+  <div class="card hidden" id="setup">
+    <label class="lbl">1. Escoge los días</label>
+    <div class="chips" id="diasChips"></div>
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn ghost" id="todosBtn" type="button">Todos</button>
+      <button class="btn ghost" id="ningunoBtn" type="button">Ninguno</button>
+    </div>
+    <label class="lbl">2. ¿Cuántas palabras?</label>
+    <select id="cuantas">
+      <option value="10">10</option>
+      <option value="20">20</option>
+      <option value="0">Todas</option>
+    </select>
+    <p class="hint" style="text-align:left;margin-top:14px">Verás la palabra en inglés. Presiona 🎤 y dila en español.</p>
+    <button class="btn big" id="empezarBtn" type="button">¡Empezar!</button>
+    <p id="noMic" class="hidden" style="margin-top:12px">⚠️ Este navegador no reconoce la voz. Puedes escribir las respuestas, o abrir esta página en Chrome, Edge o Safari para hablar.</p>
+  </div>
+
+  <!-- QUIZ -->
+  <div class="card hidden" id="quiz">
+    <div class="progress"><div id="bar"></div></div>
+    <div class="center" id="contador"></div>
+    <div class="prompt" id="prompt"></div>
+    <div class="hint">Dilo en español</div>
+    <div class="center">
+      <button class="btn big" id="micBtn" type="button">🎤 Hablar</button>
+    </div>
+    <div class="heard" id="heard"></div>
+    <div id="typeBox" class="hidden">
+      <input type="text" id="typed" placeholder="Escribe tu respuesta" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="center"><button class="btn" id="typedBtn" type="button">Revisar</button></div>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:10px">
+      <button class="btn ghost" id="escribirBtn" type="button">⌨️ Escribir</button>
+      <button class="btn ghost" id="noSeBtn" type="button">No sé</button>
+      <button class="btn hidden" id="sigBtn" type="button">Siguiente ➜</button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="card hidden" id="final">
+    <div class="score" id="score"></div>
+    <div class="center" id="guardado">Guardando…</div>
+    <ul class="res" id="resList"></ul>
+    <div class="center" style="margin-top:16px"><button class="btn" id="otraBtn" type="button">Otra vez</button></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var API = q.get('api'), EMAIL = q.get('email'), TS = q.get('ts'), TOKEN = q.get('token');
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var MAX_INTENTOS = 3;
+
+  var palabras = [], seleccion = {}, test = [], idx = 0, intentos = 0, resultados = [], respondida = false, rec = null;
+
+  function $(id) { return document.getElementById(id); }
+  function show(id) { ['setup', 'quiz', 'final'].forEach(function (s) { $(s).classList.toggle('hidden', s !== id); }); }
+  function error(msg) { $('errBox').textContent = msg; $('errBox').classList.remove('hidden'); ['setup', 'quiz', 'final'].forEach(function (s) { $(s).classList.add('hidden'); }); $('who').textContent = ''; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  // ---------- answer checking ----------
+  var NUM = { '0':'cero','1':'uno','2':'dos','3':'tres','4':'cuatro','5':'cinco','6':'seis','7':'siete','8':'ocho','9':'nueve','10':'diez','11':'once','12':'doce','13':'trece','14':'catorce','15':'quince','16':'dieciseis','17':'diecisiete','18':'dieciocho','19':'diecinueve','20':'veinte','30':'treinta','40':'cuarenta','50':'cincuenta','60':'sesenta','70':'setenta','80':'ochenta','90':'noventa','100':'cien' };
+  var ARTICULOS = /^(el|la|los|las|un|una|unos|unas)\s+/;
+  function norm(s) {
+    s = String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    s = s.replace(/[¿?¡!.,;:"'«»()\[\]…]/g, ' ').replace(/\s+/g, ' ').trim();
+    s = s.split(' ').map(function (w) { return NUM[w] || w; }).join(' ');
+    return s.replace(ARTICULOS, '');
+  }
+  function variantes(palabra) {
+    var base = String(palabra);
+    var sinParen = base.replace(/\([^)]*\)/g, ' ');
+    var conParen = base.replace(/[()]/g, ' ');
+    var out = [];
+    [sinParen, conParen].forEach(function (b) {
+      var partes = b.split(/[\/;]| o /);
+      partes.forEach(function (p, i) {
+        p = p.trim(); if (!p) return;
+        // "alto/a" -> "alta"; "bonito/a" -> "bonita"
+        if (p.length <= 3 && i > 0 && partes[0]) {
+          var w = partes[0].trim();
+          out.push(w.slice(0, Math.max(0, w.length - p.length)) + p);
+        } else out.push(p);
+      });
+    });
+    return out.map(norm).filter(function (v, i, a) { return v && a.indexOf(v) === i; });
+  }
+  function lev(a, b) {
+    var m = a.length, n = b.length, d = [], i, j;
+    for (i = 0; i <= m; i++) { d[i] = [i]; }
+    for (j = 0; j <= n; j++) { d[0][j] = j; }
+    for (i = 1; i <= m; i++) for (j = 1; j <= n; j++)
+      d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    return d[m][n];
+  }
+  function coincide(oidos, palabra) {
+    var vs = variantes(palabra);
+    for (var k = 0; k < oidos.length; k++) {
+      var h = norm(oidos[k]);
+      if (!h) continue;
+      for (var v = 0; v < vs.length; v++) {
+        var t = vs[v];
+        if (h === t) return true;
+        if ((' ' + h + ' ').indexOf(' ' + t + ' ') >= 0) return true;        // said it inside a longer phrase
+        var tol = t.length >= 10 ? 2 : (t.length >= 5 ? 1 : 0);               // small slips on longer words
+        if (tol && lev(h, t) <= tol) return true;
+      }
+    }
+    return false;
+  }
+
+  // ---------- setup ----------
+  function cargar() {
+    if (!API || !EMAIL || !TS || !TOKEN) { error('Abre Test Me desde la Caja Leitner de tu clase.'); return; }
+    var url = API + '?page=testme_api&action=vocab&email=' + encodeURIComponent(EMAIL) + '&ts=' + encodeURIComponent(TS) + '&token=' + encodeURIComponent(TOKEN);
+    fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.status !== 'ok') { error(d.message || 'No se pudo cargar el vocabulario.'); return; }
+      palabras = d.palabras || [];
+      if (!palabras.length) { error('Todavía no hay vocabulario.'); return; }
+      $('who').textContent = 'Estudiante: ' + d.email;
+      pintarDias();
+      if (!SR) $('noMic').classList.remove('hidden');
+      show('setup');
+    }).catch(function () { error('No se pudo conectar con la clase. Revisa tu internet e inténtalo otra vez.'); });
+  }
+  function pintarDias() {
+    var dias = palabras.map(function (p) { return p.dia; }).filter(function (d, i, a) { return a.indexOf(d) === i; }).sort(function (a, b) { return a - b; });
+    var ultimo = dias[dias.length - 1];
+    seleccion = {}; seleccion[ultimo] = true;
+    $('diasChips').innerHTML = dias.map(function (d) {
+      return '<span class="chip' + (seleccion[d] ? ' on' : '') + '" data-dia="' + d + '">Día ' + d + '</span>';
+    }).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (c) {
+      c.onclick = function () { var d = c.getAttribute('data-dia'); seleccion[d] = !seleccion[d]; c.classList.toggle('on', !!seleccion[d]); };
+    });
+  }
+  function marcarTodos(on) {
+    Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (c) { seleccion[c.getAttribute('data-dia')] = on; c.classList.toggle('on', on); });
+  }
+
+  function empezar() {
+    var pool = palabras.filter(function (p) { return seleccion[p.dia]; });
+    if (!pool.length) { alert('Escoge por lo menos un día.'); return; }
+    for (var i = pool.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+    var n = Number($('cuantas').value);
+    test = n ? pool.slice(0, n) : pool;
+    idx = 0; resultados = [];
+    show('quiz');
+    pregunta();
+  }
+
+  // ---------- quiz ----------
+  function pregunta() {
+    var p = test[idx];
+    intentos = 0; respondida = false;
+    $('bar').style.width = (idx / test.length * 100) + '%';
+    $('contador').textContent = (idx + 1) + ' de ' + test.length;
+    $('prompt').textContent = p.traduccion;
+    $('heard').innerHTML = '';
+    $('typed').value = '';
+    $('sigBtn').classList.add('hidden');
+    $('noSeBtn').classList.remove('hidden');
+    $('micBtn').disabled = false;
+    $('micBtn').classList.toggle('hidden', !SR);
+    $('typeBox').classList.toggle('hidden', !!SR);
+    $('escribirBtn').classList.toggle('hidden', !SR);
+  }
+
+  function escuchar() {
+    if (!SR || respondida) return;
+    try { if (rec) rec.abort(); } catch (e) {}
+    rec = new SR();
+    rec.lang = 'es-MX';
+    rec.interimResults = false;
+    rec.maxAlternatives = 5;
+    var listo = false;
+    $('micBtn').classList.add('mic-on');
+    $('micBtn').textContent = '👂 Escuchando…';
+    rec.onresult = function (e) {
+      listo = true;
+      var alts = [];
+      for (var i = 0; i < e.results[0].length; i++) alts.push(e.results[0][i].transcript);
+      revisar(alts);
+    };
+    rec.onerror = function (e) {
+      listo = true;
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        $('heard').innerHTML = '<span class="bad">El micrófono está bloqueado.</span> Permite el micrófono en tu navegador o usa ⌨️ Escribir.';
+      } else if (e.error === 'no-speech') {
+        $('heard').textContent = 'No te oí. Inténtalo otra vez.';
+      } else {
+        $('heard').textContent = 'Error: ' + e.error + '. Inténtalo otra vez o usa ⌨️ Escribir.';
+      }
+    };
+    rec.onend = function () {
+      $('micBtn').classList.remove('mic-on');
+      $('micBtn').textContent = '🎤 Hablar';
+      if (!listo) $('heard').textContent = 'No te oí. Inténtalo otra vez.';
+    };
+    rec.start();
+  }
+
+  function revisar(alts) {
+    if (respondida) return;
+    var p = test[idx];
+    var oido = alts[0] || '';
+    intentos++;
+    if (coincide(alts, p.palabra)) {
+      registrar(true, oido);
+      $('heard').innerHTML = 'Escuché: “' + esc(oido) + '”<br><span class="ok">✓ ¡Correcto!</span> ' + esc(p.palabra);
+    } else if (intentos < MAX_INTENTOS) {
+      $('heard').innerHTML = 'Escuché: “' + esc(oido) + '”<br><span class="bad">✗ Otra vez</span> (' + (MAX_INTENTOS - intentos) + ' intento' + (MAX_INTENTOS - intentos === 1 ? '' : 's') + ' más)';
+    } else {
+      registrar(false, oido);
+      $('heard').innerHTML = 'Escuché: “' + esc(oido) + '”<br><span class="bad">✗</span> La respuesta es: <b>' + esc(p.palabra) + '</b>';
+    }
+  }
+
+  function registrar(ok, oido) {
+    respondida = true;
+    var p = test[idx];
+    resultados.push({ dia: p.dia, palabra: p.palabra, traduccion: p.traduccion, ok: ok, oido: oido });
+    $('micBtn').disabled = true;
+    $('noSeBtn').classList.add('hidden');
+    $('typeBox').classList.add('hidden');
+    $('escribirBtn').classList.add('hidden');
+    $('sigBtn').classList.remove('hidden');
+    $('sigBtn').focus();
+  }
+
+  function siguiente() {
+    idx++;
+    if (idx >= test.length) terminar(); else pregunta();
+  }
+
+  // ---------- results ----------
+  function terminar() {
+    $('bar').style.width = '100%';
+    var bien = resultados.filter(function (r) { return r.ok; }).length;
+    $('score').textContent = bien + ' / ' + resultados.length;
+    $('resList').innerHTML = resultados.map(function (r) {
+      return '<li>' + (r.ok ? '<span class="ok">✓</span> ' : '<span class="bad">✗</span> ') + esc(r.traduccion) + ' → <b>' + esc(r.palabra) + '</b>' +
+        (!r.ok && r.oido ? ' <small>(dijiste: ' + esc(r.oido) + ')</small>' : '') + '</li>';
+    }).join('');
+    show('final');
+    $('guardado').textContent = 'Guardando…';
+    var dias = Object.keys(seleccion).filter(function (d) { return seleccion[d]; }).join(', ');
+    fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ page: 'testme_api', action: 'guardar', email: EMAIL, ts: TS, token: TOKEN, dias: dias, preguntas: resultados.length, correctas: bien, detalle: resultados })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      $('guardado').innerHTML = d.status === 'ok' ? '<span class="ok">✓ Guardado para tu profesor</span>' : '<span class="bad">No se guardó: ' + esc(d.message || '') + '</span>';
+    }).catch(function () { $('guardado').innerHTML = '<span class="bad">No se pudo guardar. Revisa tu internet.</span>'; });
+  }
+
+  // ---------- buttons ----------
+  $('todosBtn').onclick = function () { marcarTodos(true); };
+  $('ningunoBtn').onclick = function () { marcarTodos(false); };
+  $('empezarBtn').onclick = empezar;
+  $('micBtn').onclick = escuchar;
+  $('escribirBtn').onclick = function () { $('typeBox').classList.remove('hidden'); $('escribirBtn').classList.add('hidden'); $('typed').focus(); };
+  $('typedBtn').onclick = function () { var t = $('typed').value.trim(); if (t) revisar([t]); };
+  $('typed').onkeydown = function (e) { if (e.key === 'Enter') $('typedBtn').click(); };
+  $('noSeBtn').onclick = function () { registrar(false, ''); $('heard').innerHTML = 'La respuesta es: <b>' + esc(test[idx].palabra) + '</b>'; };
+  $('sigBtn').onclick = siguiente;
+  $('otraBtn').onclick = function () { show('setup'); };
+
+  cargar();
+})();
+</script>
+</body>
+</html>
